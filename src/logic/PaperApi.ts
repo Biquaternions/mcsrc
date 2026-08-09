@@ -14,7 +14,8 @@ import {
 import {cachedFetch, downloadProgress, getJson, type TargetJar} from "./JarProvider.ts";
 import {type Jar, openJar} from "../utils/Jar.ts";
 import type {JarEntryPath} from "../utils/Names.ts";
-import {patch as bspatch} from 'bsdiff-wasm/wrapper';
+// @ts-ignore
+import { loadBspatch } from "bsdiff-wasm";
 
 const VERSIONS_URL = "https://fill.papermc.io/v3/projects/paper/versions"
 const LATEST_URL = "https://fill.papermc.io/v3/projects/paper/versions/%version%/builds/latest"
@@ -158,19 +159,32 @@ async function runPaperclip(jar: Jar) {
     const mcHash = await sha256hex(mcJarData);
     const patchFileData = new Uint8Array(await patch.arrayBuffer());
     const patchHash = await sha256hex(patchFileData);
-    const patched = await bspatch(mcJarData, patchFileData);
-    // const patchedHash = await sha256hex(patchFileData);
-    // TODO why cant we hash this
+    const patched = await bsPatch(mcJarData, patchFileData);
+    const patchedHash = await sha256hex(patched);
 
     if (mcHash !== patchLine[1]) {
         throw new Error(`Vanilla jar hash mismatch: expected ${patchLine[1]}, got ${mcHash}`);
     } else if (patchHash !== patchLine[2]) {
         throw new Error(`Patch file hash mismatch: expected ${patchLine[2]}, got ${patchHash}`);
-    // } else if (patchedHash != patchLine[3]) {
-    //     throw new Error(`Patched jar hash mismatch: expected ${patchLine[3]}, got ${patchedHash}`);
+    } else if (patchedHash != patchLine[3]) {
+        throw new Error(`Patched jar hash mismatch: expected ${patchLine[3]}, got ${patchedHash}`);
     }
 
     return new Blob([patched], {type: mcJar.type});
+}
+
+async function bsPatch(mcJarData: Uint8Array<ArrayBuffer>, patchFileData: Uint8Array<ArrayBuffer>) {
+    console.log("Loading bspatch")
+    const patcher = await loadBspatch();
+
+    patcher.FS.writeFile("o", mcJarData);
+    patcher.FS.writeFile("p", patchFileData);
+
+    console.log("Running bspatch");
+    patcher.callMain(["o", "n", "p"]);
+    console.log("Done");
+
+    return patcher.FS.readFile("n");
 }
 
 async function sha256hex(bytes: Uint8Array): Promise<string> {
