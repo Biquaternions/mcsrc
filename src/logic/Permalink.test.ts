@@ -169,14 +169,14 @@ describe('Permalink', () => {
                 expect(state.targetVersion).toBe('1.21.4');
                 expect(state.file).toBe('net/minecraft/ChatFormatting.class');
                 expect(state.selectedLines).toBe(null);
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+                expect(state.diff).toEqual({ leftTargetVersion: '1.21' });
             });
 
             it('should parse a diff permalink with a nested file path', () => {
                 const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/world/entity/player/Player')!;
 
                 expect(state.file).toBe('net/minecraft/world/entity/player/Player.class');
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+                expect(state.diff).toEqual({ leftTargetVersion: '1.21' });
             });
 
             it('should not append .class if already present in diff path', () => {
@@ -186,7 +186,7 @@ describe('Permalink', () => {
 
             it('should URL-decode versions in diff path', () => {
                 const state = parsePathToState('1/diff/1.21%2B/1.21.4%2B/net/minecraft/ChatFormatting')!;
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21+' });
+                expect(state.diff).toEqual({ leftTargetVersion: '1.21+' });
                 expect(state.targetVersion).toBe('1.21.4+');
             });
 
@@ -197,7 +197,7 @@ describe('Permalink', () => {
                 expect(state.targetVersion).toBe('1.21.4');
                 expect(state.file).toBeUndefined();
                 expect(state.selectedLines).toBe(null);
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+                expect(state.diff).toEqual({ leftTargetVersion: '1.21' });
             });
 
             it('should return null when diff path has insufficient segments', () => {
@@ -230,7 +230,7 @@ describe('Permalink', () => {
                 expect(state.version).toBe(1);
                 expect(state.targetVersion).toBe('1.21.5');
                 expect(state.file).toBe('net/minecraft/server/MinecraftServer.class');
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21.4' });
+                expect(state.diff).toEqual({ leftTargetVersion: '1.21.4' });
             });
         });
     });
