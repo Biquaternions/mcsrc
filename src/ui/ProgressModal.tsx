@@ -1,6 +1,7 @@
 import { Modal, Progress } from "antd";
-import { downloadProgress, remapProgress } from "../logic/MinecraftApi";
+import { remapProgress } from "../logic/MinecraftApi";
 import { useObservable } from "../utils/UseObservable";
+import {downloadProgress} from "../logic/JarProvider.ts";
 
 const ProgressModal = () => {
     const download = useObservable(downloadProgress);

@@ -1,6 +1,6 @@
 import { BehaviorSubject, combineLatest, distinctUntilChanged, map, of, shareReplay, switchMap } from "rxjs";
 import { jarIndex, type ClassData } from "../workers/jar-index/client";
-import { minecraftJar } from "./MinecraftApi";
+import { targetJar } from "./JarProvider";
 import { classNameFromClassFilePath, isClassFilePath, type ClassName } from "../utils/Names";
 
 export class ClassNode {
@@ -61,7 +61,7 @@ export class InheritanceIndex {
 
 export const selectedInheritanceClassName = new BehaviorSubject<ClassName | null>(null);
 
-export const inheritanceIndex = combineLatest([jarIndex, minecraftJar]).pipe(
+export const inheritanceIndex = combineLatest([jarIndex, targetJar]).pipe(
     distinctUntilChanged(),
     switchMap(async ([jarIndexInstance, jarInstance]) => {
         const index = new InheritanceIndex();

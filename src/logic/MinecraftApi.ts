@@ -1,12 +1,22 @@
-import { BehaviorSubject, combineLatest, distinctUntilChanged, filter, from, map, shareReplay, switchMap, tap, Observable } from "rxjs";
-import { agreedEula } from "./Settings";
-import { openJar, type Jar } from "../utils/Jar";
-import { selectedMinecraftVersion } from "./State";
-import { remapMinecraftJar } from "../workers/remap/client";
+import {
+    BehaviorSubject,
+    combineLatest,
+    distinctUntilChanged,
+    filter,
+    from,
+    map,
+    Observable,
+    shareReplay,
+    switchMap,
+    tap
+} from "rxjs";
+import {agreedEula} from "./Settings";
+import {openJar} from "../utils/Jar";
+import {remapMinecraftJar} from "../workers/remap/client";
 
 import EXPERIMENTAL_VERSIONS from "./experimental_versions.json";
+import {CACHE_NAME, cachedFetch, downloadProgress, getJson, type TargetJar} from "./JarProvider.ts";
 
-const CACHE_NAME = 'mcsrc-v1';
 const VERSIONS_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
 
 interface VersionsList {
@@ -36,12 +46,7 @@ interface VersionDownload {
     sha1?: string;
 }
 
-export interface MinecraftJar {
-    version: string;
-    jar: Jar;
-    blob: Blob;
-    metadata: MinecraftJarMetadata;
-}
+type MinecraftJar = TargetJar<MinecraftJarMetadata>;
 
 export interface MinecraftJarMetadata {
     clientSha1?: string;
@@ -52,31 +57,13 @@ export interface MinecraftJarMetadata {
 export const minecraftVersions = agreedEula.observable.pipe(
     filter(agreed => agreed),
     switchMap(() => from(fetchVersions())),
-    tap(versions => {
-        // On inital load, if we dont have a version selected or the selected version is not valid, default to the latest version.
-        const currentVersion = selectedMinecraftVersion.value;
-        const isValid = currentVersion !== null && versions.some(v => v.id === currentVersion);
-
-        if (!isValid && versions.length > 0) {
-            // Select the latest stable release version if it exists, otherwise fall back to the latest version
-            const latestRelease = versions.find(v => v.type === "release");
-            const defaultVersion = latestRelease ? latestRelease.id : versions[0].id;
-            selectedMinecraftVersion.next(defaultVersion);
-        }
-    }),
     shareReplay({ bufferSize: 1, refCount: false })
 );
 
-export const minecraftVersionIds = minecraftVersions.pipe(
-    map(versions => versions.map(v => v.id))
-);
-
-export const downloadProgress = new BehaviorSubject<number | undefined>(undefined);
 export const remapProgress = new BehaviorSubject<number | undefined>(undefined);
 
 export const REMAPPED_JAR_CACHE_VERSION = 7;
 
-export const minecraftJar = minecraftJarPipeline(selectedMinecraftVersion);
 export function minecraftJarPipeline(source$: Observable<string | null>): Observable<MinecraftJar> {
     return combineLatest([
         source$.pipe(
@@ -91,17 +78,6 @@ export function minecraftJarPipeline(source$: Observable<string | null>): Observ
         switchMap(version => from(downloadMinecraftJar(version, downloadProgress))),
         shareReplay({ bufferSize: 1, refCount: false })
     );
-}
-
-async function getJson<T>(url: string): Promise<T> {
-    console.log(`Fetching JSON from ${url}`);
-    const response = await fetch(url);
-
-    if (!response.ok) {
-        throw new Error(`Failed to fetch JSON from ${url}: ${response.statusText}`);
-    }
-
-    return response.json();
 }
 
 async function fetchVersions(): Promise<VersionListEntry[]> {
@@ -145,67 +121,6 @@ async function fetchVersionManifest(version: VersionListEntry): Promise<VersionM
     return getJson<VersionManifest>(version.url);
 }
 
-async function cachedFetch(url: string, onProgress?: (percent: number) => void): Promise<Blob> {
-    if (!('caches' in window)) {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
-        }
-        return await consumeResponseWithProgress(response, onProgress);
-    }
-
-    const cache = await caches.open(CACHE_NAME);
-    const cachedResponse = await cache.match(url);
-    if (cachedResponse) {
-        return await cachedResponse.blob();
-    }
-
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
-    }
-
-    const blob = await consumeResponseWithProgress(response, onProgress);
-
-    // Cache the blob after it's been consumed
-    await cache.put(url, new Response(blob, {
-        headers: response.headers
-    }));
-
-    return blob;
-}
-
-async function consumeResponseWithProgress(response: Response, onProgress?: (percent: number) => void): Promise<Blob> {
-    const contentLength = response.headers.get('content-length');
-    const total = contentLength ? parseInt(contentLength, 10) : 0;
-
-    if (!response.body || total === 0 || !onProgress) {
-        return await response.blob();
-    }
-
-    const reader = response.body.getReader();
-    const chunks: Uint8Array<ArrayBuffer>[] = [];
-    let receivedLength = 0;
-    let lastPercent = -1;
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        chunks.push(value);
-        receivedLength += value.length;
-
-        const percent = Math.round((receivedLength / total) * 100);
-
-        if (percent !== lastPercent) {
-            onProgress(percent);
-            lastPercent = percent;
-        }
-    }
-
-    return new Blob(chunks);
-}
-
 async function downloadMinecraftJar(version: VersionListEntry, progress: BehaviorSubject<number | undefined>): Promise<MinecraftJar> {
     console.log(`Downloading Minecraft jar for version: ${version.id}`);
     const versionManifest = await fetchVersionManifest(version);
@@ -232,6 +147,7 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
         version: version.id,
         jar,
         blob,
+        type: "minecraft",
         metadata: {
             clientSha1: client.sha1,
             mappingsSha1: versionManifest.downloads.client_mappings?.sha1,

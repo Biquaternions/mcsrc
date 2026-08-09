@@ -5,12 +5,12 @@ import { BooleanOption, NumberOption } from "./SettingsModal";
 import { decompilerSplits, decompilerThreads, displayLambdas, MAX_THREADS, preferWasmDecompiler } from "../logic/Settings";
 import { getDecompilerOptions } from "../logic/Decompiler";
 import { decompileEntireJar, deleteCache, setOptions, type DecompileEntireJarTask } from "../workers/decompile/client";
-import { minecraftJar } from "../logic/MinecraftApi";
+import { targetJar } from "../logic/JarProvider";
 
 export const modalOpen = new BehaviorSubject(false);
 
 export const JarDecompilerModal = () => {
-    const jar = useObservable(minecraftJar);
+    const jar = useObservable(targetJar);
     const isModalOpen = useObservable(modalOpen);
 
     const [messageApi, messageCtx] = message.useMessage();

@@ -1,10 +1,10 @@
 import { BehaviorSubject, asyncScheduler, combineLatest, distinct, distinctUntilChanged, map, Observable, switchMap, throttleTime } from 'rxjs';
-import { minecraftJar } from './MinecraftApi';
+import { targetJar } from './JarProvider';
 import { performSearch } from './Search';
 import { searchQuery } from './State';
 import { isClassFilePath, type ClassFilePath } from '../utils/Names';
 
-export const fileList = minecraftJar.pipe(
+export const fileList = targetJar.pipe(
     distinctUntilChanged(),
     map(jar => Object.keys(jar.jar.entries))
 );

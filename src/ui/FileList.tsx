@@ -8,7 +8,7 @@ import { useObservable } from '../utils/UseObservable';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Key } from 'antd/es/table/interface';
 import { openCodeTab } from '../logic/tabs';
-import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
+import { targetJar, type TargetJar } from '../logic/JarProvider';
 import { decompileClass, getDecompilerOptions } from '../logic/Decompiler';
 import { selectedFile, referencesQuery } from '../logic/State';
 import { autoJarIndex, compactPackages, displayLambdas } from '../logic/Settings';
@@ -125,7 +125,7 @@ function getPathKeys(filePath: string): Key[] {
     return result;
 }
 
-const handleCopyContent = async (path: ClassFilePath, jar: MinecraftJar) => {
+const handleCopyContent = async (path: ClassFilePath, jar: TargetJar<unknown>) => {
     try {
         message.loading({ content: 'Decompiling...', key: 'copy-content' });
         await setOptions(getDecompilerOptions(displayLambdas.value));
@@ -148,7 +148,7 @@ interface ContextMenuInfo {
 const getMenuItems = (
     contextMenu: ContextMenuInfo | null,
     handleCopyItem: (path: ClassFilePath) => void,
-    jar: MinecraftJar | undefined
+    jar: TargetJar<unknown> | undefined
 ): MenuProps['items'] => {
     if (!contextMenu) return [];
 
@@ -236,7 +236,7 @@ const FileList = () => {
     const [expandedKeys, setExpandedKeys] = useState<Key[]>();
     const [contextMenu, setContextMenu] = useState<ContextMenuInfo | null>(null);
 
-    const jar = useObservable(minecraftJar);
+    const jar = useObservable(targetJar);
     const selectedKeys = useObservable(selectedFileKeys);
     const classes = useObservable(classesList);
     const onSelect: TreeProps['onSelect'] = useCallback((selectedKeys: Key[]) => {

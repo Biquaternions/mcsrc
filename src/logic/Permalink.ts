@@ -1,24 +1,24 @@
 import { combineLatest } from "rxjs";
 import { resetPermalinkAffectingSettings, supportsPermalinking } from "./Settings";
-import { diffLeftSelectedMinecraftVersion, diffView, selectedFile, selectedLines, selectedMinecraftVersion } from "./State";
+import { diffLeftSelectedTargetVersion, diffView, selectedFile, selectedLines, selectedTargetVersion } from "./State";
 import { toClassFilePath, withoutClassExtension, type ClassFilePath } from "../utils/Names";
 
 export interface State {
     version: number; // Allows us to change the permalink structure in the future
-    minecraftVersion: string;
+    targetVersion: string;
     file: ClassFilePath | undefined;
     selectedLines: {
         line: number;
         lineEnd?: number;
     } | null;
     diff?: {
-        leftMinecraftVersion: string;
+        leftTargetVersion: string;
     };
 }
 
 const DEFAULT_STATE: State = {
     version: 0,
-    minecraftVersion: "",
+    targetVersion: "",
     file: undefined,
     selectedLines: null
 };
@@ -53,10 +53,10 @@ export const parsePathToState = (path: string): State | null => {
         const filePath = segments.slice(4).join('/');
         return {
             version,
-            minecraftVersion: rightMinecraftVersion,
+            targetVersion: rightMinecraftVersion,
             file: filePath ? toClassFilePath(filePath) : undefined,
             selectedLines: null,
-            diff: { leftMinecraftVersion }
+            diff: { leftTargetVersion: leftMinecraftVersion }
         };
     }
 
@@ -70,7 +70,7 @@ export const parsePathToState = (path: string): State | null => {
 
     return {
         version,
-        minecraftVersion,
+        targetVersion: minecraftVersion,
         file: filePath ? toClassFilePath(filePath) : undefined,
         selectedLines: lineNumber ? { line: lineNumber, lineEnd: lineEnd || undefined } : null
     };
@@ -109,8 +109,8 @@ export const getInitialState = (): State => {
 if (typeof window !== "undefined") {
     window.addEventListener('load', () => {
         combineLatest([
-            selectedMinecraftVersion,
-            diffLeftSelectedMinecraftVersion,
+            selectedTargetVersion,
+            diffLeftSelectedTargetVersion,
             selectedFile,
             selectedLines,
             supportsPermalinking,

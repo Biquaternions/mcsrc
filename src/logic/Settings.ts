@@ -68,14 +68,14 @@ export class NumberSetting extends Setting<number> {
 export class StringSetting<T extends string = string> extends Setting<T> {
     constructor(key: string, defaultValue: T, validValues?: readonly T[]) {
         super(
-            key, 
-            defaultValue, 
+            key,
+            defaultValue,
             (s) => {
                 if (validValues && !validValues.includes(s as T)) {
                     return defaultValue;
                 }
                 return s as T;
-            }, 
+            },
             v => v
         );
     }
@@ -163,7 +163,7 @@ export const autoJarIndex = new BooleanSetting('auto_jar_index', true);
 export const displayLambdas = new BooleanSetting('display_lambdas', false);
 export const bytecode = new BooleanSetting('bytecode', false);
 export const unifiedDiff = new BooleanSetting('unified_diff', false);
-export const favoriteMinecraftVersions = new StringArraySetting('favorite_minecraft_versions', []);
+export const favoriteTargetVersions = new StringArraySetting('favorite_minecraft_versions', []);
 export const showSnapshotVersions = new BooleanSetting('show_snapshot_versions', true);
 export const focusSearch = new KeybindSetting('focus_search', 'Ctrl+ ');
 export const showStructure = new KeybindSetting('show_structure', 'Ctrl+F12');

@@ -11,8 +11,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
-    "lint": "oxlint --type-aware --deny-warnings",
-    "lint:fix": "oxlint --fix --type-aware --deny-warnings"
+    "lint": "oxlint --type-aware --type-check --deny-warnings",
+    "lint:fix": "oxlint --fix --type-aware --type-check --deny-warnings"
   },
   "dependencies": {
     "@katana-project/zip": "^0.7.1",
@@ -20,6 +20,7 @@
     "@run-slicer/vf": "^0.5.0-1.11.2",
     "@xyflow/react": "^12.10.1",
     "antd": "^6.3.2",
+    "bsdiff-wasm": "0.1.4",
     "comlink": "^4.4.2",
     "dagre": "^0.8.5",
     "dexie": "^4.3.0",

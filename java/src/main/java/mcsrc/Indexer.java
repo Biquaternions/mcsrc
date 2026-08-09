@@ -29,7 +29,7 @@ public class Indexer {
     private static final Map<String, Set<String>> references = new HashMap<>();
     private static int referenceSize = 0;
     private static final int ASM_VERSION = Opcodes.ASM9;
-    
+
     private static final Map<String, ClassInheritanceInfo> inheritanceData = new HashMap<>();
     private static final Map<String, ClassMemberInfo> memberData = new HashMap<>();
     private static MemoryMappingTree mappingTree;
@@ -72,7 +72,7 @@ public class Indexer {
     public static String getBytecode(ArrayBuffer[] classBuffers) {
         return getBytecode(Arrays.stream(classBuffers).map(buffer -> new Int8Array(buffer).copyToJavaArray()).toArray(byte[][]::new));
     }
-    
+
     public static String getBytecode(byte[][] classBytes) {
         StringBuilder result = new StringBuilder();
 
@@ -92,7 +92,7 @@ public class Indexer {
     }
 
     public static void addReference(String key, String value) {
-        if (!isMinecraft(key)) {
+        if (!shouldIndex(key)) {
             return;
         }
 
@@ -100,10 +100,10 @@ public class Indexer {
         referenceSize++;
     }
 
-    private static boolean isMinecraft(String str) {
-        return str.startsWith("net/minecraft") || str.startsWith("com/mojang");
+    private static boolean shouldIndex(String str) {
+        return str.startsWith("net/minecraft") || str.startsWith("com/mojang") || str.startsWith("io/papermc") || str.startsWith("org/bukkit") || str.startsWith("org/spigotmc") || str.startsWith("com/destroystokyo") || str.startsWith("ca/spottedleaf");
     }
-    
+
     public static void addClassData(String className, String superName, String[] interfaces, int accessFlags) {
         ClassInheritanceInfo info = inheritanceData.computeIfAbsent(className, k -> new ClassInheritanceInfo());
         info.className = className;
@@ -134,7 +134,7 @@ public class Indexer {
         }
         return result.toArray(new String[0]);
     }
-    
+
     @JSExport
     public static String[] getClassData() {
         List<String> result = new ArrayList<>();

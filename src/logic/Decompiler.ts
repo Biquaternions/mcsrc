@@ -2,7 +2,7 @@ import {
     BehaviorSubject,
     combineLatest, distinctUntilChanged, from, map, Observable, of, shareReplay, switchMap, throttleTime
 } from "rxjs";
-import { minecraftJar, type MinecraftJar } from "./MinecraftApi";
+import { targetJar, type TargetJar } from "./JarProvider";
 import { selectedFile } from "./State";
 import { bytecode, displayLambdas } from "./Settings";
 import type { Options } from "./vf";
@@ -28,8 +28,8 @@ export function getDecompilerOptions(displayLambdas: boolean): Options {
     return options;
 }
 
-export const currentResult = decompileResultPipeline(minecraftJar);
-export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observable<DecompileResult> {
+export const currentResult = decompileResultPipeline(targetJar);
+export function decompileResultPipeline(jar: Observable<TargetJar<unknown>>): Observable<DecompileResult> {
     return combineLatest([
         selectedFile,
         jar,

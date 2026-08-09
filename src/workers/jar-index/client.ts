@@ -1,6 +1,6 @@
 import * as Comlink from "comlink";
 import { BehaviorSubject, distinctUntilChanged, map, shareReplay } from "rxjs";
-import { minecraftJar, type MinecraftJar } from "../../logic/MinecraftApi";
+import { targetJar, type TargetJar } from "../../logic/JarProvider";
 import type {ClassDataString, JarIndexer, MemberData, ReferenceKey, ReferenceString} from "./types";
 import Dexie, { type EntityTable } from "dexie";
 import { isClassFilePath, toClassName, type ClassFilePath, type ClassName } from "../../utils/Names";
@@ -28,7 +28,7 @@ export const indexProgress = new BehaviorSubject<number>(-1);
 
 let currentJarIndex: JarIndex | null = null;
 
-export const jarIndex = minecraftJar.pipe(
+export const jarIndex = targetJar.pipe(
     distinctUntilChanged(),
     map(jar => {
         // Clean up the previous JarIndex instance
@@ -59,7 +59,7 @@ db.version(1).stores({
 const batchSize = 25;
 
 export class JarIndex {
-    readonly minecraftJar: MinecraftJar;
+    readonly serverJar: TargetJar<unknown>;
 
     private _workers: ReturnType<typeof createWrorker>[] | undefined;
     private get workers() {
@@ -73,8 +73,8 @@ export class JarIndex {
     private indexPromise: Promise<void> | null = null;
     private classDataCache: ClassData[] | null = null;
 
-    constructor(minecraftJar: MinecraftJar) {
-        this.minecraftJar = minecraftJar;
+    constructor(serverJar: TargetJar<unknown>) {
+        this.serverJar = serverJar;
     }
 
     destroy(): void {
@@ -103,9 +103,9 @@ export class JarIndex {
             console.log(`Indexing minecraft jar using ${this.workers.length} workers`);
 
             // Initialize all workers in parallel
-            await Promise.all(this.workers.map(worker => worker.c.setJar(this.minecraftJar.version, this.minecraftJar.blob)));
+            await Promise.all(this.workers.map(worker => worker.c.setJar(this.serverJar.version, this.serverJar.blob)));
 
-            const jar = this.minecraftJar.jar;
+            const jar = this.serverJar.jar;
             const classNames = Object.keys(jar.entries)
                 .filter(isClassFilePath);
 
@@ -178,7 +178,7 @@ export class JarIndex {
             return this.classDataCache;
         }
 
-        const dbResult = await db.classData.get(this.minecraftJar.jar.name);
+        const dbResult = await db.classData.get(this.serverJar.jar.name);
         if (dbResult) {
             this.classDataCache = dbResult.classes;
             return this.classDataCache;
@@ -196,7 +196,7 @@ export class JarIndex {
             this.classDataCache = classDataStrings.map(parseClassData);
 
             await db.classData.put({
-                name: this.minecraftJar.jar.name,
+                name: this.serverJar.jar.name,
                 classes: this.classDataCache,
             });
 

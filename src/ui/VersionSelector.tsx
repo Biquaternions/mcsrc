@@ -3,10 +3,10 @@ import type { ButtonProps } from "antd";
 import { DownOutlined, EyeInvisibleOutlined, EyeOutlined, SearchOutlined, StarFilled, StarOutlined } from "@ant-design/icons";
 import { Fragment, useMemo, useState } from "react";
 import type { BehaviorSubject } from "rxjs";
-import { minecraftVersions } from "../logic/MinecraftApi";
-import { selectedMinecraftVersion } from "../logic/State";
+import { targetVersions } from "../logic/JarProvider";
+import { selectedTargetVersion } from "../logic/State";
 import { useObservable } from "../utils/UseObservable";
-import { favoriteMinecraftVersions, showSnapshotVersions } from "../logic/Settings";
+import { favoriteTargetVersions, showSnapshotVersions } from "../logic/Settings";
 
 const EMPTY_FAVORITE_VERSIONS: string[] = [];
 
@@ -17,13 +17,13 @@ interface VersionSelectorProps {
 }
 
 function VersionSelector({
-    selectedVersion = selectedMinecraftVersion,
+    selectedVersion = selectedTargetVersion,
     minWidth = 128,
     size,
 }: VersionSelectorProps) {
-    const versions = useObservable(minecraftVersions);
+    const versions = useObservable(targetVersions);
     const currentVersion = useObservable(selectedVersion);
-    const favoriteVersions = useObservable(favoriteMinecraftVersions.observable) ?? EMPTY_FAVORITE_VERSIONS;
+    const favoriteVersions = useObservable(favoriteTargetVersions.observable) ?? EMPTY_FAVORITE_VERSIONS;
     const showSnapshots = useObservable(showSnapshotVersions.observable) ?? true;
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
@@ -32,7 +32,7 @@ function VersionSelector({
     const filteredVersions = useMemo(() => {
         const normalizedQuery = query.trim().toLowerCase();
         const visibleVersions = versions
-            ?.filter(v => showSnapshots || v.type === "release" || favoriteSet.has(v.id))
+            ?.filter(v => showSnapshots || v.releaseType === "release" || favoriteSet.has(v.id))
             .filter(v => v.id.toLowerCase().includes(normalizedQuery)) ?? [];
 
         return [...visibleVersions].sort((a, b) => {
@@ -46,7 +46,7 @@ function VersionSelector({
     const selectedVersionId = currentVersion || versions?.[0]?.id;
 
     const toggleFavorite = (version: string) => {
-        favoriteMinecraftVersions.value = favoriteVersions.includes(version)
+        favoriteTargetVersions.value = favoriteVersions.includes(version)
             ? favoriteVersions.filter(v => v !== version)
             : [...favoriteVersions, version];
     };
