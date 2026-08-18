@@ -173,6 +173,7 @@ export class DecompileWorker {
         }
     });
 
+    private static CBUKKIT_REGEX = /\/v\d+(?:_\d+){1,2}_R\d+\//
     async #decompile(
         jarName: string,
         jarClasses: ClassName[],
@@ -186,7 +187,8 @@ export class DecompileWorker {
         let currentClassName: ClassName | undefined;
 
         const sources = await vf.decompile(classNames, {
-            source: async (name) => {
+            source: async (rawName) => {
+                const name = rawName.replace(DecompileWorker.CBUKKIT_REGEX, "/");
                 const className = toClassName(name);
                 const data = await classData[className]?.data;
 
@@ -246,7 +248,8 @@ export class DecompileWorker {
         });
 
         const res: DecompileResult[] = [];
-        for (const [rawClassName, source] of Object.entries(sources)) {
+        for (const [rawClassNameRaw, source] of Object.entries(sources)) {
+            const rawClassName = rawClassNameRaw.replace(DecompileWorker.CBUKKIT_REGEX, "/");
             const className = toClassName(rawClassName);
             const checksum = classData[className]?.checksum ?? 0;
             const tokens = allTokens[source] ?? [];
