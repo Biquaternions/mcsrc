@@ -104,7 +104,8 @@ async function downloadPaperJar(version: VersionListEntry, progress: BehaviorSub
 
     const paperclipJar = await openJar(versionKey, rawBlob);
 
-    const patchedBlob = await runPaperclip(paperclipJar);
+    const paperclipRunMethod = await isPreBundler(cleanedId) ? runPaperclipLegacy : runPaperclip;
+    const patchedBlob = await paperclipRunMethod(paperclipJar);
     const patchedJar = await openJar(versionKey + ".patched", patchedBlob);
 
     return {
@@ -173,6 +174,67 @@ async function runPaperclip(jar: Jar) {
     return new Blob([patched], {type: mcJar.type});
 }
 
+async function runPaperclipLegacy(jar: Jar) {
+    const patchPropertiesEntry = jar.entries["patch.properties" as JarEntryPath];
+    if (!patchPropertiesEntry) {
+        throw new Error("Paperclip jar doesn't contain patch properties");
+    }
+
+    const properties = Object.fromEntries(
+        (await patchPropertiesEntry.text()).split("\n")
+            .filter(line => !line.startsWith("#"))
+            .map(line => {
+                const [key, ...values] = line.split("=");
+                return [key.trim(), values.join("=").trim()];
+            })
+    );
+
+    const versionLine = properties["version"];
+    if (!versionLine) {
+        throw new Error("Paperclip jar doesn't contain a reference to the current version");
+    }
+
+    const sourceLine = properties["sourceUrl"]?.replace("\\:", ":");
+    if (!sourceLine) {
+        throw new Error("Paperclip jar doesn't contain a reference to the source jar");
+    }
+
+    const patchLine = properties["patch"]
+    if (!patchLine) {
+        throw new Error("Paperclip jar doesn't contain a reference to a patch for this version");
+    }
+
+    const originalHashLine = properties["originalHash"]?.toLowerCase();
+    const patchedHashLine = properties["patchedHash"]?.toLowerCase();
+    if (!originalHashLine || !patchedHashLine) {
+        throw new Error("Paperclip jar doesn't contain the hashes for this version");
+    }
+
+    const patchEntry = jar.entries[patchLine as JarEntryPath];
+    if (!patchEntry) {
+        throw new Error("Paperclip jar doesn't contain a patch for this version");
+    }
+    const patch = await patchEntry.blob();
+
+    const mcRaw = await cachedFetch(sourceLine);
+    const mcRawJar = await openJar(`mojang_${versionLine}.jar`, mcRaw);
+    const mcJar = mcRawJar.blob;
+
+    const mcJarData = new Uint8Array(await mcJar.arrayBuffer());
+    const mcHash = await sha256hex(mcJarData);
+    const patchFileData = new Uint8Array(await patch.arrayBuffer());
+    const patched = await bsPatch(mcJarData, patchFileData);
+    const patchedHash = await sha256hex(patched);
+
+    if (mcHash !== originalHashLine) {
+        throw new Error(`Vanilla jar hash mismatch: expected ${originalHashLine}, got ${mcHash}`);
+    } else if (patchedHash != patchedHashLine) {
+        throw new Error(`Patched jar hash mismatch: expected ${patchedHashLine}, got ${patchedHash}`);
+    }
+
+    return new Blob([patched], {type: mcJar.type});
+}
+
 async function bsPatch(mcJarData: Uint8Array<ArrayBuffer>, patchFileData: Uint8Array<ArrayBuffer>) {
     console.log("Loading bspatch")
     const patcher = await loadBspatch();
@@ -196,4 +258,16 @@ async function sha256hex(bytes: Uint8Array): Promise<string> {
     return Array.from(new Uint8Array(hash))
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
+}
+
+async function isPreBundler(version: string): Promise<boolean> {
+    if (!version.startsWith("1.")) {
+        return false;
+    }
+    const splits = version.split(".");
+    if (splits[0] !== "1" || splits.length < 2) {
+        throw new Error("Not a valid version format: " + splits[0]);
+    }
+    const major = parseInt(splits[1])
+    return major < 18;
 }

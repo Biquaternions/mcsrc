@@ -24,6 +24,7 @@ export async function openJar(name: string, blob: Blob): Promise<Jar> {
 // }
 
 class JarImpl implements Jar {
+    private static CBUKKIT_REGEX = /\/v\d+(?:_\d+){1,2}_R\d+\//
     private zip: Zip;
     public name: string;
     public blob: Blob;
@@ -34,7 +35,7 @@ class JarImpl implements Jar {
         this.blob = blob;
         this.zip = zip;
         zip.entries.forEach(entry => {
-            this.entries[entry.name as JarEntryPath] = entry;
+            this.entries[entry.name.replace(JarImpl.CBUKKIT_REGEX, "/") as JarEntryPath] = entry;
         });
     }
 }
